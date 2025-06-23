@@ -134,15 +134,29 @@ app.get('/api/me', authenticateToken, (req, res) => {
 // 获取所有激活的问卷（公开访问）
 app.get('/api/surveys', async (req, res) => {
   try {
-    const query = `
-      SELECT s.*, u.username as creator_name 
-      FROM surveys s 
-      JOIN users u ON s.creator_id = u.id 
-      WHERE s.is_active = 1 
-      AND (s.start_date IS NULL OR s.start_date <= NOW())
-      AND (s.end_date IS NULL OR s.end_date >= NOW())
-      ORDER BY s.created_at DESC
-    `;
+    let query;
+    
+    if (database.dbType === 'postgresql') {
+      query = `
+        SELECT s.*, u.username as creator_name 
+        FROM surveys s 
+        JOIN users u ON s.creator_id = u.id 
+        WHERE s.is_active = true 
+        AND (s.start_date IS NULL OR s.start_date <= CURRENT_TIMESTAMP)
+        AND (s.end_date IS NULL OR s.end_date >= CURRENT_TIMESTAMP)
+        ORDER BY s.created_at DESC
+      `;
+    } else {
+      query = `
+        SELECT s.*, u.username as creator_name 
+        FROM surveys s 
+        JOIN users u ON s.creator_id = u.id 
+        WHERE s.is_active = 1 
+        AND (s.start_date IS NULL OR s.start_date <= NOW())
+        AND (s.end_date IS NULL OR s.end_date >= NOW())
+        ORDER BY s.created_at DESC
+      `;
+    }
     
     const surveys = await database.query(query);
     res.json(surveys);
