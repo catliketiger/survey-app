@@ -136,7 +136,7 @@ app.get('/api/surveys', async (req, res) => {
   try {
     let query;
     
-    if (database.dbType === 'postgresql') {
+    if (database.dbType === 'postgres') {
       query = `
         SELECT s.*, u.username as creator_name 
         FROM surveys s 
