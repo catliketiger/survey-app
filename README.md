@@ -36,6 +36,8 @@
 npm install
 ```
 
+**🚀 现在已部署到Vercel + Neon PostgreSQL！**
+
 ### 2. 初始化数据库
 
 ```bash
