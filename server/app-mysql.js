@@ -217,10 +217,14 @@ app.post('/api/surveys/:id/submit', async (req, res) => {
 
   try {
     // 验证问卷是否可用
-    const survey = await database.get(
-      'SELECT * FROM surveys WHERE id = ? AND is_active = 1', 
-      [surveyId]
-    );
+    let surveyQuery;
+    if (database.dbType === 'postgres') {
+      surveyQuery = 'SELECT * FROM surveys WHERE id = ? AND is_active = true';
+    } else {
+      surveyQuery = 'SELECT * FROM surveys WHERE id = ? AND is_active = 1';
+    }
+    
+    const survey = await database.get(surveyQuery, [surveyId]);
     
     if (!survey) {
       return res.status(404).json({ error: '问卷不存在或已失效' });
