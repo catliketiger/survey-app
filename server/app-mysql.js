@@ -456,14 +456,19 @@ app.get('/api/admin/surveys/:id/results', authenticateToken, requireAdmin, async
   }
 });
 
-// 启动服务器
-app.listen(PORT, () => {
-  console.log(`服务器运行在 http://localhost:${PORT}`);
-});
+// 启动服务器（仅在非Vercel环境）
+if (process.env.VERCEL !== '1') {
+  app.listen(PORT, () => {
+    console.log(`服务器运行在 http://localhost:${PORT}`);
+  });
 
-// 优雅关闭
-process.on('SIGTERM', async () => {
-  console.log('正在关闭服务器...');
-  await database.close();
-  process.exit(0);
-});
+  // 优雅关闭
+  process.on('SIGTERM', async () => {
+    console.log('正在关闭服务器...');
+    await database.close();
+    process.exit(0);
+  });
+}
+
+// 导出app供Vercel使用
+module.exports = app;

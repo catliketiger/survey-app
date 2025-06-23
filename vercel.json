@@ -1,27 +1,18 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "server/app-mysql.js",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "server/app-mysql.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "public/$1"
-    }
-  ],
   "functions": {
-    "server/app-mysql.js": {
+    "api/index.js": {
       "maxDuration": 30
     }
   },
-  "env": {
-    "NODE_ENV": "production"
-  }
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/public/$1"
+    }
+  ]
 }
