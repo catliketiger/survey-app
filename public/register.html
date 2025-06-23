@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注册 - 简单问卷调查</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header class="header">
+        <nav class="nav container">
+            <a href="/" class="logo">简单问卷</a>
+            <div class="nav-links">
+                <a href="/">首页</a>
+                <a href="login.html">登录</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="main">
+        <div class="auth-container">
+            <div class="auth-card">
+                <h2 class="auth-title">用户注册</h2>
+                
+                <div id="alertContainer"></div>
+                
+                <form id="registerForm">
+                    <div class="form-group">
+                        <label for="username" class="form-label">用户名</label>
+                        <input type="text" id="username" name="username" class="form-input" required minlength="3">
+                        <small style="color: #666;">至少3个字符</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="email" class="form-label">邮箱</label>
+                        <input type="email" id="email" name="email" class="form-input" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="password" class="form-label">密码</label>
+                        <input type="password" id="password" name="password" class="form-input" required minlength="6">
+                        <small style="color: #666;">至少6个字符</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="confirmPassword" class="form-label">确认密码</label>
+                        <input type="password" id="confirmPassword" name="confirmPassword" class="form-input" required>
+                    </div>
+                    
+                    <button type="submit" class="btn" style="width: 100%;">注册</button>
+                </form>
+                
+                <div class="auth-links">
+                    <p>已有账户？<a href="login.html">立即登录</a></p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/auth.js"></script>
+    <script>
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            if (password !== confirmPassword) {
+                showAlert('两次输入的密码不一致', 'danger');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showAlert('注册成功！请登录', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 2000);
+                } else {
+                    if (data.errors) {
+                        showAlert(data.errors.map(e => e.msg).join(', '), 'danger');
+                    } else {
+                        showAlert(data.error || '注册失败', 'danger');
+                    }
+                }
+            } catch (error) {
+                showAlert('网络错误，请稍后重试', 'danger');
+            }
+        });
+
+        function showAlert(message, type) {
+            const alertContainer = document.getElementById('alertContainer');
+            alertContainer.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+        }
+    </script>
+</body>
+</html>

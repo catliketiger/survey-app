@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理后台 - 简单问卷调查</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header class="header">
+        <nav class="nav container">
+            <a href="/" class="logo">简单问卷</a>
+            <div class="nav-links">
+                <a href="/">首页</a>
+                <span id="username"></span>
+                <button class="btn btn-small btn-secondary" onclick="logout()">登出</button>
+            </div>
+        </nav>
+    </header>
+
+    <main class="main">
+        <div class="container">
+            <div class="admin-header">
+                <h1>问卷管理</h1>
+                <div>
+                    <button class="btn btn-secondary" onclick="testEmail()">测试邮件</button>
+                    <button class="btn" onclick="showCreateModal()">创建新问卷</button>
+                </div>
+            </div>
+
+            <div id="alertContainer"></div>
+
+            <div class="card">
+                <table class="table" id="surveysTable">
+                    <thead>
+                        <tr>
+                            <th>问卷标题</th>
+                            <th>创建者</th>
+                            <th>状态</th>
+                            <th>开始时间</th>
+                            <th>结束时间</th>
+                            <th>回答数</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="surveysTableBody">
+                        <!-- 数据将在这里动态加载 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- 创建问卷模态框 -->
+    <div id="createModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>创建新问卷</h2>
+                <span class="close" onclick="hideCreateModal()">&times;</span>
+            </div>
+            <form id="createSurveyForm">
+                <div class="form-group">
+                    <label for="title" class="form-label">问卷标题</label>
+                    <input type="text" id="title" name="title" class="form-input" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="description" class="form-label">问卷描述</label>
+                    <textarea id="description" name="description" class="form-input form-textarea"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="startDate" class="form-label">开始时间</label>
+                    <input type="datetime-local" id="startDate" name="startDate" class="form-input">
+                </div>
+                
+                <div class="form-group">
+                    <label for="endDate" class="form-label">结束时间</label>
+                    <input type="datetime-local" id="endDate" name="endDate" class="form-input">
+                </div>
+                
+                <div class="form-group">
+                    <label for="emailRecipient" class="form-label">结果接收邮箱</label>
+                    <input type="email" id="emailRecipient" name="emailRecipient" class="form-input">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">问题设置</label>
+                    <div id="questionsContainer">
+                        <!-- 问题将在这里动态添加 -->
+                    </div>
+                    <button type="button" class="btn btn-secondary" onclick="addQuestion()">添加问题</button>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="hideCreateModal()">取消</button>
+                    <button type="submit" class="btn">创建问卷</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/admin.js"></script>
+
+    <style>
+        /* 模态框样式 */
+        .modal {
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 0;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+        }
+
+        .close {
+            font-size: 2rem;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .close:hover {
+            color: #333;
+        }
+
+        .modal form {
+            padding: 1.5rem;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            padding: 1.5rem;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .question-item {
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background: #f8f9fa;
+        }
+
+        .question-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .remove-question {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 0.25rem 0.5rem;
+            cursor: pointer;
+        }
+
+        .option-item {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .remove-option {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 0.25rem 0.5rem;
+            cursor: pointer;
+        }
+    </style>
+</body>
+</html>

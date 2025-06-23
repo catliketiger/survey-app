@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>问卷填写 - 简单问卷调查</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header class="header">
+        <nav class="nav container">
+            <a href="/" class="logo">简单问卷</a>
+            <div class="nav-links">
+                <a href="/">返回首页</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="main">
+        <div class="container">
+            <div id="loadingMessage" class="card">
+                <div style="text-align: center; padding: 2rem;">
+                    <p>正在加载问卷...</p>
+                </div>
+            </div>
+
+            <div id="surveyContainer" class="hidden">
+                <div class="card">
+                    <h1 id="surveyTitle"></h1>
+                    <p id="surveyDescription"></p>
+                </div>
+
+                <div id="alertContainer"></div>
+
+                <form id="surveyForm" class="card">
+                    <div class="form-group">
+                        <label for="respondentName" class="form-label">您的姓名 <span class="question-required">*</span></label>
+                        <input type="text" id="respondentName" name="respondentName" class="form-input" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="respondentEmail" class="form-label">您的邮箱 <span class="question-required">*</span></label>
+                        <input type="email" id="respondentEmail" name="respondentEmail" class="form-input" required>
+                    </div>
+
+                    <div id="questionsContainer">
+                        <!-- 问题将在这里动态加载 -->
+                    </div>
+
+                    <button type="submit" class="btn btn-success" style="width: 100%; padding: 1rem;">
+                        提交问卷
+                    </button>
+                </form>
+            </div>
+
+            <div id="errorMessage" class="card hidden">
+                <div style="text-align: center; padding: 2rem;">
+                    <h3>加载失败</h3>
+                    <p id="errorText"></p>
+                    <a href="/" class="btn">返回首页</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let currentSurvey = null;
+
+        // 获取URL参数
+        function getUrlParameter(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
+        // 显示错误信息
+        function showError(message) {
+            document.getElementById('loadingMessage').classList.add('hidden');
+            document.getElementById('surveyContainer').classList.add('hidden');
+            document.getElementById('errorMessage').classList.remove('hidden');
+            document.getElementById('errorText').textContent = message;
+        }
+
+        // 显示提示信息
+        function showAlert(message, type) {
+            const alertContainer = document.getElementById('alertContainer');
+            alertContainer.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+        }
+
+        // 渲染问题
+        function renderQuestion(question, index) {
+            const questionDiv = document.createElement('div');
+            questionDiv.className = 'question-group';
+            
+            let questionHtml = `
+                <div class="question-title">
+                    ${index + 1}. ${question.question_text}
+                    ${question.is_required ? '<span class="question-required">*</span>' : ''}
+                </div>
+            `;
+
+            const fieldName = `question_${question.id}`;
+
+            switch (question.question_type) {
+                case 'text':
+                    questionHtml += `
+                        <input type="text" name="${fieldName}" class="form-input" 
+                               ${question.is_required ? 'required' : ''}>
+                    `;
+                    break;
+
+                case 'textarea':
+                    questionHtml += `
+                        <textarea name="${fieldName}" class="form-input form-textarea" 
+                                  ${question.is_required ? 'required' : ''}></textarea>
+                    `;
+                    break;
+
+                case 'radio':
+                    questionHtml += '<div class="radio-group">';
+                    if (question.options && question.options.length > 0) {
+                        question.options.forEach((option, optIndex) => {
+                            questionHtml += `
+                                <div class="radio-option">
+                                    <input type="radio" id="${fieldName}_${optIndex}" 
+                                           name="${fieldName}" value="${option}" 
+                                           ${question.is_required ? 'required' : ''}>
+                                    <label for="${fieldName}_${optIndex}">${option}</label>
+                                </div>
+                            `;
+                        });
+                    }
+                    questionHtml += '</div>';
+                    break;
+
+                case 'checkbox':
+                    questionHtml += '<div class="checkbox-group">';
+                    if (question.options && question.options.length > 0) {
+                        question.options.forEach((option, optIndex) => {
+                            questionHtml += `
+                                <div class="checkbox-option">
+                                    <input type="checkbox" id="${fieldName}_${optIndex}" 
+                                           name="${fieldName}" value="${option}">
+                                    <label for="${fieldName}_${optIndex}">${option}</label>
+                                </div>
+                            `;
+                        });
+                    }
+                    questionHtml += '</div>';
+                    break;
+
+                case 'select':
+                    questionHtml += `<select name="${fieldName}" class="form-select" 
+                                             ${question.is_required ? 'required' : ''}>
+                        <option value="">请选择...</option>`;
+                    if (question.options && question.options.length > 0) {
+                        question.options.forEach(option => {
+                            questionHtml += `<option value="${option}">${option}</option>`;
+                        });
+                    }
+                    questionHtml += '</select>';
+                    break;
+            }
+
+            questionDiv.innerHTML = questionHtml;
+            return questionDiv;
+        }
+
+        // 收集答案
+        function collectAnswers() {
+            const answers = [];
+            const formData = new FormData(document.getElementById('surveyForm'));
+
+            currentSurvey.questions.forEach(question => {
+                const fieldName = `question_${question.id}`;
+                let answerText = '';
+
+                if (question.question_type === 'checkbox') {
+                    const checkedValues = [];
+                    const checkboxes = document.querySelectorAll(`input[name="${fieldName}"]:checked`);
+                    checkboxes.forEach(cb => checkedValues.push(cb.value));
+                    answerText = checkedValues.join(', ');
+                } else {
+                    answerText = formData.get(fieldName) || '';
+                }
+
+                // 验证必填项
+                if (question.is_required && !answerText.trim()) {
+                    throw new Error(`请回答问题：${question.question_text}`);
+                }
+
+                answers.push({
+                    question_id: question.id,
+                    answer_text: answerText
+                });
+            });
+
+            return answers;
+        }
+
+        // 加载问卷
+        async function loadSurvey() {
+            const surveyId = getUrlParameter('id');
+            if (!surveyId) {
+                showError('缺少问卷ID参数');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/surveys/${surveyId}`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    currentSurvey = data;
+                    
+                    // 显示问卷信息
+                    document.getElementById('surveyTitle').textContent = data.title;
+                    document.getElementById('surveyDescription').textContent = data.description || '';
+
+                    // 渲染问题
+                    const questionsContainer = document.getElementById('questionsContainer');
+                    questionsContainer.innerHTML = '';
+
+                    data.questions.forEach((question, index) => {
+                        questionsContainer.appendChild(renderQuestion(question, index));
+                    });
+
+                    // 显示问卷表单
+                    document.getElementById('loadingMessage').classList.add('hidden');
+                    document.getElementById('surveyContainer').classList.remove('hidden');
+                } else {
+                    showError(data.error || '加载问卷失败');
+                }
+            } catch (error) {
+                showError('网络错误，请稍后重试');
+            }
+        }
+
+        // 提交问卷
+        document.getElementById('surveyForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            try {
+                const answers = collectAnswers();
+                const respondentName = document.getElementById('respondentName').value;
+                const respondentEmail = document.getElementById('respondentEmail').value;
+
+                const response = await fetch(`/api/surveys/${currentSurvey.id}/submit`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        respondent_name: respondentName,
+                        respondent_email: respondentEmail,
+                        answers: answers
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showAlert('提交成功！感谢您的参与。', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 2000);
+                } else {
+                    showAlert(data.error || '提交失败', 'danger');
+                }
+            } catch (error) {
+                if (error.message.includes('请回答问题')) {
+                    showAlert(error.message, 'danger');
+                } else {
+                    showAlert('提交失败，请稍后重试', 'danger');
+                }
+            }
+        });
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', loadSurvey);
+    </script>
+</body>
+</html>
