@@ -239,6 +239,18 @@
         document.getElementById('surveyForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
+            const submitBtn = document.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            
+            // 防止重复提交
+            if (submitBtn.disabled) {
+                return;
+            }
+            
+            // 禁用提交按钮并显示加载状态
+            submitBtn.disabled = true;
+            submitBtn.textContent = '提交中...';
+
             try {
                 const answers = collectAnswers();
                 const respondentName = document.getElementById('respondentName').value;
@@ -260,11 +272,15 @@
 
                 if (response.ok) {
                     showAlert('提交成功！感谢您的参与。', 'success');
+                    submitBtn.textContent = '提交成功';
                     setTimeout(() => {
                         window.location.href = '/';
                     }, 2000);
                 } else {
                     showAlert(data.error || '提交失败', 'danger');
+                    // 恢复按钮状态
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
                 }
             } catch (error) {
                 if (error.message.includes('请回答问题')) {
@@ -272,6 +288,9 @@
                 } else {
                     showAlert('提交失败，请稍后重试', 'danger');
                 }
+                // 恢复按钮状态
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
             }
         });
 
