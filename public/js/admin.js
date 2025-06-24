@@ -719,8 +719,9 @@ async function deleteSurvey(surveyId) {
 
 // 重置创建表单为创建模式
 function resetToCreateMode() {
+    // 重置表单提交行为为默认（创建模式）
     const form = document.getElementById('createSurveyForm');
-    form.onsubmit = createSurvey;
+    form.onsubmit = null; // 清除编辑模式的onsubmit，让addEventListener生效
     document.querySelector('#createModal h2').textContent = '创建新问卷';
 }
 
