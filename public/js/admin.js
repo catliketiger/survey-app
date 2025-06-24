@@ -1,6 +1,65 @@
 // 管理后台功能
 
 let questionCount = 0;
+let questions = []; // 存储当前正在编辑的问题列表
+
+// 渲染问题列表（用于编辑模式）
+function renderQuestions() {
+    const container = document.getElementById('questionsContainer');
+    container.innerHTML = '';
+    questionCount = 0;
+    
+    questions.forEach((question, index) => {
+        questionCount++;
+        const questionDiv = document.createElement('div');
+        questionDiv.className = 'question-item';
+        questionDiv.id = `question_${questionCount}`;
+        
+        questionDiv.innerHTML = `
+            <div class="question-header">
+                <h4>问题 ${questionCount}</h4>
+                <button type="button" class="remove-question" onclick="removeQuestion(${questionCount})">删除</button>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">问题内容</label>
+                <input type="text" name="question_text_${questionCount}" class="form-input" value="${question.question_text}" required>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">问题类型</label>
+                <select name="question_type_${questionCount}" class="form-select" onchange="handleQuestionTypeChange(${questionCount})">
+                    <option value="text" ${question.question_type === 'text' ? 'selected' : ''}>单行文本</option>
+                    <option value="textarea" ${question.question_type === 'textarea' ? 'selected' : ''}>多行文本</option>
+                    <option value="radio" ${question.question_type === 'radio' ? 'selected' : ''}>单选题</option>
+                    <option value="checkbox" ${question.question_type === 'checkbox' ? 'selected' : ''}>多选题</option>
+                    <option value="select" ${question.question_type === 'select' ? 'selected' : ''}>下拉选择</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" name="is_required_${questionCount}" ${question.is_required ? 'checked' : ''}> 必填项
+                </label>
+            </div>
+            
+            <div class="form-group options-group" id="options_${questionCount}" style="display: ${(question.question_type === 'radio' || question.question_type === 'checkbox' || question.question_type === 'select') ? 'block' : 'none'};">
+                <label class="form-label">选项设置</label>
+                <div class="options-container" id="options_container_${questionCount}">
+                    ${question.options ? question.options.map((option, optIndex) => `
+                        <div class="option-item">
+                            <input type="text" name="option_${questionCount}_${optIndex + 1}" class="form-input" placeholder="选项内容" value="${option}">
+                            <button type="button" class="remove-option" onclick="removeOption(this)">删除</button>
+                        </div>
+                    `).join('') : ''}
+                </div>
+                <button type="button" class="add-option" onclick="addOption(${questionCount})">添加选项</button>
+            </div>
+        `;
+        
+        container.appendChild(questionDiv);
+    });
+}
 
 // 测试邮件功能
 async function testEmail() {
