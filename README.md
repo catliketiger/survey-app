@@ -1,6 +1,10 @@
-# 简单问卷调查网站
+# 简单问卷调查网站 v1.0.0
 
-一个基于Node.js + Express + SQLite的完整问卷调查系统，提供用户注册、问卷管理、问卷填写、结果分析等功能。
+一个基于Node.js + Express的现代化问卷调查系统，提供用户认证、问卷管理、数据分析等完整功能。
+
+![版本](https://img.shields.io/badge/版本-1.0.0-blue.svg)
+![状态](https://img.shields.io/badge/状态-稳定版-green.svg)
+![平台](https://img.shields.io/badge/平台-Vercel-black.svg)
 
 ## 功能特性
 
