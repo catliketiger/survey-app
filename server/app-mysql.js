@@ -446,24 +446,30 @@ app.patch('/api/admin/surveys/:id/toggle', authenticateToken, requireAdmin, asyn
   }
 });
 
-// 获取问卷统计结果
+// 获取问卷统计结果（支持分页）
 app.get('/api/admin/surveys/:id/results', authenticateToken, requireAdmin, async (req, res) => {
   const surveyId = req.params.id;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const offset = (page - 1) * limit;
   
   try {
+    console.log(`获取问卷结果 - 问卷ID: ${surveyId}, 页码: ${page}, 每页: ${limit}`);
+    
     // 获取基本统计
     const stats = await database.get(
       'SELECT COUNT(*) as total_responses FROM responses WHERE survey_id = ?', 
       [surveyId]
     );
 
-    // 获取所有回答
+    // 获取分页回答
     const responses = await database.query(`
       SELECT r.id, r.respondent_name, r.respondent_email, r.submitted_at
       FROM responses r
       WHERE r.survey_id = ?
       ORDER BY r.submitted_at DESC
-    `, [surveyId]);
+      LIMIT ? OFFSET ?
+    `, [surveyId, limit, offset]);
 
     // 为每个回答获取具体答案
     for (const response of responses) {
@@ -478,10 +484,20 @@ app.get('/api/admin/surveys/:id/results', authenticateToken, requireAdmin, async
       response.answers = answers.map(a => `${a.question_text}: ${a.answer_text}`).join('\n');
     }
     
+    // 计算分页信息
+    const totalPages = Math.ceil(stats.total_responses / limit);
+    
     res.json({
       survey_id: parseInt(surveyId),
       total_responses: stats.total_responses,
-      responses: responses
+      responses: responses,
+      pagination: {
+        current_page: page,
+        per_page: limit,
+        total_pages: totalPages,
+        has_next: page < totalPages,
+        has_prev: page > 1
+      }
     });
   } catch (error) {
     console.error('获取问卷结果失败:', error);

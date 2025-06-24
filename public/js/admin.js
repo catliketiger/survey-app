@@ -403,9 +403,9 @@ async function toggleSurvey(surveyId) {
 }
 
 // 查看问卷结果
-async function viewResults(surveyId) {
+async function viewResults(surveyId, page = 1) {
     try {
-        const response = await fetch(`/api/admin/surveys/${surveyId}/results`);
+        const response = await fetch(`/api/admin/surveys/${surveyId}/results?page=${page}&limit=10`);
         const data = await response.json();
 
         if (response.ok) {
@@ -435,6 +435,10 @@ function displayResults(data) {
                 .btn:hover { background: #0056b3; }
                 .btn-success { background: #28a745; }
                 .btn-success:hover { background: #1e7e34; }
+                .pagination { margin: 20px 0; text-align: center; }
+                .pagination .btn { margin: 0 2px; }
+                .pagination .btn:disabled { background: #6c757d; cursor: not-allowed; }
+                .pagination .btn.current { background: #28a745; }
             </style>
         </head>
         <body>
@@ -442,11 +446,13 @@ function displayResults(data) {
             <div class="stats">
                 <h3>总体统计</h3>
                 <p>总回答数: ${data.total_responses}</p>
+                ${data.pagination ? `<p>当前显示: 第 ${data.pagination.current_page} 页，共 ${data.pagination.total_pages} 页</p>` : ''}
             </div>
             <div class="action-buttons">
                 <button class="btn btn-success" onclick="sendCSVEmail(${data.survey_id})">发送CSV结果到邮箱</button>
                 <button class="btn" onclick="window.print()">打印结果</button>
             </div>
+            ${data.pagination && data.pagination.total_pages > 1 ? generatePaginationHTML(data.survey_id, data.pagination) : ''}
             <h3>详细回答</h3>
     `;
 
@@ -494,12 +500,80 @@ function displayResults(data) {
                         button.textContent = '发送CSV结果到邮箱';
                     }
                 }
+                
+                // 翻页函数
+                async function loadPage(surveyId, page) {
+                    try {
+                        const response = await fetch(\`/api/admin/surveys/\${surveyId}/results?page=\${page}&limit=10\`);
+                        const data = await response.json();
+                        
+                        if (response.ok) {
+                            // 重新加载页面内容
+                            window.location.reload();
+                            // 注意：这里会重新打开窗口，实际应用中可能需要更复杂的处理
+                            window.opener.viewResults(surveyId, page);
+                            window.close();
+                        } else {
+                            alert('加载失败：' + (data.error || '未知错误'));
+                        }
+                    } catch (error) {
+                        alert('加载失败：网络错误');
+                    }
+                }
             </script>
         </body>
         </html>
     `;
 
     resultWindow.document.write(resultHtml);
+}
+
+// 生成分页HTML
+function generatePaginationHTML(surveyId, pagination) {
+    let paginationHtml = '<div class="pagination">';
+    
+    // 上一页按钮
+    if (pagination.has_prev) {
+        paginationHtml += `<button class="btn" onclick="loadPage(${surveyId}, ${pagination.current_page - 1})">上一页</button>`;
+    } else {
+        paginationHtml += `<button class="btn" disabled>上一页</button>`;
+    }
+    
+    // 页码按钮
+    const startPage = Math.max(1, pagination.current_page - 2);
+    const endPage = Math.min(pagination.total_pages, pagination.current_page + 2);
+    
+    if (startPage > 1) {
+        paginationHtml += `<button class="btn" onclick="loadPage(${surveyId}, 1)">1</button>`;
+        if (startPage > 2) {
+            paginationHtml += `<span>...</span>`;
+        }
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+        if (i === pagination.current_page) {
+            paginationHtml += `<button class="btn current">${i}</button>`;
+        } else {
+            paginationHtml += `<button class="btn" onclick="loadPage(${surveyId}, ${i})">${i}</button>`;
+        }
+    }
+    
+    if (endPage < pagination.total_pages) {
+        if (endPage < pagination.total_pages - 1) {
+            paginationHtml += `<span>...</span>`;
+        }
+        paginationHtml += `<button class="btn" onclick="loadPage(${surveyId}, ${pagination.total_pages})">${pagination.total_pages}</button>`;
+    }
+    
+    // 下一页按钮
+    if (pagination.has_next) {
+        paginationHtml += `<button class="btn" onclick="loadPage(${surveyId}, ${pagination.current_page + 1})">下一页</button>`;
+    } else {
+        paginationHtml += `<button class="btn" disabled>下一页</button>`;
+    }
+    
+    paginationHtml += '</div>';
+    return paginationHtml;
 }
 
 // 编辑问卷
