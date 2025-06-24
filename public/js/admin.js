@@ -542,8 +542,9 @@ async function editSurvey(surveyId) {
                 await updateSurvey(surveyId);
             };
             
-            // 修改模态框标题
+            // 修改模态框标题和按钮文字
             document.querySelector('#createModal h2').textContent = '编辑问卷';
+            document.querySelector('#createModal button[type="submit"]').textContent = '保存修改';
             document.getElementById('createModal').classList.remove('hidden');
         } else {
             console.error('编辑问卷 - API响应失败:', response.status, survey);
@@ -568,6 +569,12 @@ async function updateSurvey(surveyId) {
         return;
     }
 
+    // 禁用提交按钮并显示保存状态
+    const submitBtn = document.querySelector('#createModal button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = '保存中...';
+
     try {
         const response = await fetch(`/api/admin/surveys/${surveyId}`, {
             method: 'PUT',
@@ -587,14 +594,21 @@ async function updateSurvey(surveyId) {
         const data = await response.json();
 
         if (response.ok) {
-            showAlert('问卷更新成功！', 'success');
-            hideCreateModal();
-            loadSurveys();
+            showAlert('问卷保存成功！', 'success');
+            submitBtn.textContent = '保存成功';
+            setTimeout(() => {
+                hideCreateModal();
+                loadSurveys();
+            }, 1000);
         } else {
-            showAlert(data.error || '更新失败', 'danger');
+            showAlert(data.error || '保存失败', 'danger');
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
         }
     } catch (error) {
-        showAlert('更新失败，请稍后重试', 'danger');
+        showAlert('保存失败，请稍后重试', 'danger');
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
     }
 }
 
@@ -824,6 +838,7 @@ function resetToCreateMode() {
     const form = document.getElementById('createSurveyForm');
     form.onsubmit = null; // 清除编辑模式的onsubmit，让addEventListener生效
     document.querySelector('#createModal h2').textContent = '创建新问卷';
+    document.querySelector('#createModal button[type="submit"]').textContent = '创建问卷';
 }
 
 // 点击模态框外部关闭
