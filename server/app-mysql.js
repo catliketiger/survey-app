@@ -538,8 +538,17 @@ app.put('/api/admin/surveys/:id', authenticateToken, requireAdmin, async (req, r
       [title, description, start_date || null, end_date || null, email_recipient || null, surveyId]
     );
 
-    // 删除旧问题
+    // 删除旧问题（先删除相关答案）
+    await database.run(`
+      DELETE FROM answers 
+      WHERE question_id IN (
+        SELECT id FROM questions WHERE survey_id = ?
+      )
+    `, [surveyId]);
+    console.log('已删除问题相关答案');
+    
     await database.run('DELETE FROM questions WHERE survey_id = ?', [surveyId]);
+    console.log('已删除旧问题');
 
     // 插入新问题
     for (let i = 0; i < questions.length; i++) {
@@ -702,7 +711,25 @@ app.delete('/api/admin/surveys/:id', authenticateToken, requireAdmin, async (req
       return res.status(404).json({ error: '问卷不存在' });
     }
 
-    // 删除相关数据（外键约束会自动删除相关记录）
+    // 按正确顺序删除相关数据（处理外键约束）
+    // 1. 先删除答案
+    await database.run(`
+      DELETE FROM answers 
+      WHERE response_id IN (
+        SELECT id FROM responses WHERE survey_id = ?
+      )
+    `, [surveyId]);
+    console.log('已删除相关答案');
+    
+    // 2. 删除回答记录
+    await database.run('DELETE FROM responses WHERE survey_id = ?', [surveyId]);
+    console.log('已删除相关回答');
+    
+    // 3. 删除问题
+    await database.run('DELETE FROM questions WHERE survey_id = ?', [surveyId]);
+    console.log('已删除相关问题');
+    
+    // 4. 最后删除问卷
     const deleteResult = await database.run('DELETE FROM surveys WHERE id = ?', [surveyId]);
     console.log('删除结果:', deleteResult);
 
