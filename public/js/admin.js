@@ -408,8 +408,8 @@ async function editSurvey(surveyId) {
             console.log('编辑问卷 - API响应成功:', survey);
             
             // 填充编辑表单
-            document.getElementById('surveyTitle').value = survey.title;
-            document.getElementById('surveyDescription').value = survey.description || '';
+            document.getElementById('title').value = survey.title;
+            document.getElementById('description').value = survey.description || '';
             document.getElementById('startDate').value = survey.start_date ? survey.start_date.split('T')[0] : '';
             document.getElementById('endDate').value = survey.end_date ? survey.end_date.split('T')[0] : '';
             document.getElementById('emailRecipient').value = survey.email_recipient || '';
@@ -456,8 +456,8 @@ async function editSurvey(surveyId) {
 
 // 更新问卷
 async function updateSurvey(surveyId) {
-    const title = document.getElementById('surveyTitle').value;
-    const description = document.getElementById('surveyDescription').value;
+    const title = document.getElementById('title').value;
+    const description = document.getElementById('description').value;
     const startDate = document.getElementById('startDate').value;
     const endDate = document.getElementById('endDate').value;
     const emailRecipient = document.getElementById('emailRecipient').value;
