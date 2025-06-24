@@ -373,6 +373,97 @@ body {
   display: none !important;
 }
 
+/* 统计模态框样式 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #fff;
+  border-radius: 8px;
+  padding: 2rem;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 1rem;
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: #333;
+}
+
+.statistics-content {
+  margin-top: 1rem;
+}
+
+.stats-summary {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 5px;
+  margin-bottom: 2rem;
+}
+
+.stats-summary h3 {
+  margin-top: 0;
+  color: #007bff;
+}
+
+.question-stat-item {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.question-stat-item h4 {
+  margin-top: 0;
+  color: #333;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 0.5rem;
+}
+
+.chart-container {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: center;
+}
+
+.text-stats {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 5px;
+}
+
+.text-stats ul {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.text-stats li {
+  margin-bottom: 0.25rem;
+  word-wrap: break-word;
+}
+
 /* 移动端优化 */
 /* 确保移动端正确缩放 */
 .mobile-optimized {

@@ -474,6 +474,216 @@ app.get('/api/admin/surveys/:id/results', authenticateToken, requireAdmin, async
   }
 });
 
+// 获取问卷编辑信息
+app.get('/api/admin/surveys/:id/edit', authenticateToken, requireAdmin, async (req, res) => {
+  const surveyId = req.params.id;
+  
+  try {
+    // 获取问卷基本信息
+    const survey = await database.get('SELECT * FROM surveys WHERE id = ?', [surveyId]);
+    
+    if (!survey) {
+      return res.status(404).json({ error: '问卷不存在' });
+    }
+
+    // 获取问卷问题
+    const questions = await database.query(
+      'SELECT * FROM questions WHERE survey_id = ? ORDER BY order_num', 
+      [surveyId]
+    );
+    
+    // 解析选项JSON
+    questions.forEach(q => {
+      if (q.options) {
+        try {
+          q.options = typeof q.options === 'string' ? JSON.parse(q.options) : q.options;
+        } catch (e) {
+          q.options = [];
+        }
+      }
+    });
+
+    res.json({ ...survey, questions });
+  } catch (error) {
+    console.error('获取问卷编辑信息失败:', error);
+    res.status(500).json({ error: '获取编辑信息失败' });
+  }
+});
+
+// 更新问卷
+app.put('/api/admin/surveys/:id', authenticateToken, requireAdmin, async (req, res) => {
+  const surveyId = req.params.id;
+  const { title, description, start_date, end_date, email_recipient, questions } = req.body;
+
+  try {
+    // 更新问卷基本信息
+    await database.run(
+      'UPDATE surveys SET title = ?, description = ?, start_date = ?, end_date = ?, email_recipient = ? WHERE id = ?',
+      [title, description, start_date || null, end_date || null, email_recipient || null, surveyId]
+    );
+
+    // 删除旧问题
+    await database.run('DELETE FROM questions WHERE survey_id = ?', [surveyId]);
+
+    // 插入新问题
+    for (let i = 0; i < questions.length; i++) {
+      const question = questions[i];
+      const optionsJson = question.options ? JSON.stringify(question.options) : null;
+      
+      await database.run(
+        'INSERT INTO questions (survey_id, question_text, question_type, options, is_required, order_num) VALUES (?, ?, ?, ?, ?, ?)',
+        [surveyId, question.question_text, question.question_type, optionsJson, question.is_required || false, i + 1]
+      );
+    }
+
+    res.json({ message: '问卷更新成功' });
+  } catch (error) {
+    console.error('更新问卷失败:', error);
+    res.status(500).json({ error: '更新失败' });
+  }
+});
+
+// 获取问卷统计数据
+app.get('/api/admin/surveys/:id/statistics', authenticateToken, requireAdmin, async (req, res) => {
+  const surveyId = req.params.id;
+  
+  try {
+    // 获取问卷基本信息
+    const survey = await database.get('SELECT * FROM surveys WHERE id = ?', [surveyId]);
+    
+    if (!survey) {
+      return res.status(404).json({ error: '问卷不存在' });
+    }
+
+    // 获取问卷问题
+    const questions = await database.query(
+      'SELECT * FROM questions WHERE survey_id = ? ORDER BY order_num', 
+      [surveyId]
+    );
+
+    // 获取回答总数
+    const totalResponses = await database.get(
+      'SELECT COUNT(*) as count FROM responses WHERE survey_id = ?', 
+      [surveyId]
+    );
+
+    // 为每个问题统计答案分布
+    const questionStats = [];
+    
+    for (const question of questions) {
+      // 解析选项
+      let options = [];
+      if (question.options) {
+        try {
+          options = typeof question.options === 'string' ? JSON.parse(question.options) : question.options;
+        } catch (e) {
+          options = [];
+        }
+      }
+
+      // 获取该问题的所有答案
+      const answers = await database.query(`
+        SELECT a.answer_text 
+        FROM answers a 
+        JOIN responses r ON a.response_id = r.id 
+        WHERE a.question_id = ? AND r.survey_id = ?
+      `, [question.id, surveyId]);
+
+      let stats = {};
+
+      if (question.question_type === 'radio') {
+        // 单选题统计
+        stats = {
+          type: 'pie',
+          data: options.map(option => ({
+            label: option,
+            value: answers.filter(a => a.answer_text === option).length
+          }))
+        };
+      } else if (question.question_type === 'checkbox') {
+        // 多选题统计
+        const checkboxStats = {};
+        options.forEach(option => {
+          checkboxStats[option] = 0;
+        });
+
+        answers.forEach(answer => {
+          try {
+            const selectedOptions = JSON.parse(answer.answer_text || '[]');
+            selectedOptions.forEach(option => {
+              if (checkboxStats.hasOwnProperty(option)) {
+                checkboxStats[option]++;
+              }
+            });
+          } catch (e) {
+            // 处理非JSON格式的答案
+            if (checkboxStats.hasOwnProperty(answer.answer_text)) {
+              checkboxStats[answer.answer_text]++;
+            }
+          }
+        });
+
+        stats = {
+          type: 'bar',
+          data: Object.entries(checkboxStats).map(([label, value]) => ({
+            label,
+            value
+          }))
+        };
+      } else {
+        // 文本题统计
+        const textAnswers = answers.map(a => a.answer_text).filter(Boolean);
+        stats = {
+          type: 'text',
+          data: {
+            total: textAnswers.length,
+            samples: textAnswers.slice(0, 10) // 显示前10个答案作为样本
+          }
+        };
+      }
+
+      questionStats.push({
+        question_id: question.id,
+        question_text: question.question_text,
+        question_type: question.question_type,
+        total_answers: answers.length,
+        stats
+      });
+    }
+
+    res.json({
+      survey_info: survey,
+      total_responses: totalResponses.count,
+      question_statistics: questionStats
+    });
+  } catch (error) {
+    console.error('获取问卷统计失败:', error);
+    res.status(500).json({ error: '获取统计失败' });
+  }
+});
+
+// 删除问卷
+app.delete('/api/admin/surveys/:id', authenticateToken, requireAdmin, async (req, res) => {
+  const surveyId = req.params.id;
+  
+  try {
+    // 检查问卷是否存在
+    const survey = await database.get('SELECT id FROM surveys WHERE id = ?', [surveyId]);
+    
+    if (!survey) {
+      return res.status(404).json({ error: '问卷不存在' });
+    }
+
+    // 删除相关数据（外键约束会自动删除相关记录）
+    await database.run('DELETE FROM surveys WHERE id = ?', [surveyId]);
+
+    res.json({ message: '问卷删除成功' });
+  } catch (error) {
+    console.error('删除问卷失败:', error);
+    res.status(500).json({ error: '删除失败' });
+  }
+});
+
 // 启动服务器（仅在非Vercel环境）
 if (process.env.VERCEL !== '1') {
   app.listen(PORT, () => {

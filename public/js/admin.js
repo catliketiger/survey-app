@@ -106,8 +106,11 @@ function createSurveyRow(survey) {
         <td>${endDate}</td>
         <td>${survey.response_count || 0}</td>
         <td>
+            <button class="btn btn-small" onclick="editSurvey(${survey.id})">编辑</button>
+            <button class="btn btn-small btn-success" onclick="viewStatistics(${survey.id})">统计</button>
             <button class="btn btn-small" onclick="toggleSurvey(${survey.id})">${toggleText}</button>
             <button class="btn btn-small btn-secondary" onclick="viewResults(${survey.id})">查看结果</button>
+            <button class="btn btn-small btn-danger" onclick="deleteSurvey(${survey.id})">删除</button>
         </td>
     `;
 
@@ -382,9 +385,334 @@ function displayResults(data) {
     resultWindow.document.write(resultHtml);
 }
 
+// 编辑问卷
+async function editSurvey(surveyId) {
+    try {
+        const response = await fetch(`/api/admin/surveys/${surveyId}/edit`);
+        const survey = await response.json();
+        
+        if (response.ok) {
+            // 填充编辑表单
+            document.getElementById('surveyTitle').value = survey.title;
+            document.getElementById('surveyDescription').value = survey.description || '';
+            document.getElementById('startDate').value = survey.start_date ? survey.start_date.split('T')[0] : '';
+            document.getElementById('endDate').value = survey.end_date ? survey.end_date.split('T')[0] : '';
+            document.getElementById('emailRecipient').value = survey.email_recipient || '';
+            
+            // 清空现有问题
+            questions.length = 0;
+            
+            // 加载问题
+            survey.questions.forEach(question => {
+                questions.push({
+                    question_text: question.question_text,
+                    question_type: question.question_type,
+                    options: question.options || [],
+                    is_required: question.is_required
+                });
+            });
+            
+            renderQuestions();
+            
+            // 修改表单提交行为
+            const form = document.getElementById('createSurveyForm');
+            form.onsubmit = async (e) => {
+                e.preventDefault();
+                await updateSurvey(surveyId);
+            };
+            
+            // 修改模态框标题
+            document.querySelector('#createModal h2').textContent = '编辑问卷';
+            document.getElementById('createModal').classList.remove('hidden');
+        } else {
+            showAlert(survey.error || '获取问卷信息失败', 'danger');
+        }
+    } catch (error) {
+        showAlert('获取问卷信息失败', 'danger');
+    }
+}
+
+// 更新问卷
+async function updateSurvey(surveyId) {
+    const title = document.getElementById('surveyTitle').value;
+    const description = document.getElementById('surveyDescription').value;
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    const emailRecipient = document.getElementById('emailRecipient').value;
+
+    if (!title || questions.length === 0) {
+        showAlert('请填写问卷标题并添加至少一个问题', 'danger');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/admin/surveys/${surveyId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                title,
+                description,
+                start_date: startDate || null,
+                end_date: endDate || null,
+                email_recipient: emailRecipient || null,
+                questions
+            })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            showAlert('问卷更新成功！', 'success');
+            hideCreateModal();
+            loadSurveys();
+        } else {
+            showAlert(data.error || '更新失败', 'danger');
+        }
+    } catch (error) {
+        showAlert('更新失败，请稍后重试', 'danger');
+    }
+}
+
+// 查看统计
+async function viewStatistics(surveyId) {
+    try {
+        const response = await fetch(`/api/admin/surveys/${surveyId}/statistics`);
+        const data = await response.json();
+        
+        if (response.ok) {
+            showStatisticsModal(data);
+        } else {
+            showAlert(data.error || '获取统计数据失败', 'danger');
+        }
+    } catch (error) {
+        showAlert('获取统计数据失败', 'danger');
+    }
+}
+
+// 显示统计模态框
+function showStatisticsModal(data) {
+    // 创建统计模态框
+    const modalHtml = `
+        <div id="statisticsModal" class="modal-overlay">
+            <div class="modal-content" style="max-width: 800px; max-height: 80vh; overflow-y: auto;">
+                <div class="modal-header">
+                    <h2>问卷统计 - ${data.survey_info.title}</h2>
+                    <button onclick="hideStatisticsModal()" class="btn btn-small btn-secondary">关闭</button>
+                </div>
+                <div class="statistics-content">
+                    <div class="stats-summary">
+                        <h3>总体统计</h3>
+                        <p><strong>总回答数：</strong>${data.total_responses}</p>
+                        <p><strong>创建时间：</strong>${new Date(data.survey_info.created_at).toLocaleString()}</p>
+                    </div>
+                    <div class="question-stats">
+                        ${data.question_statistics.map(questionStat => 
+                            generateQuestionStatHtml(questionStat)
+                        ).join('')}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // 移除已存在的模态框
+    const existingModal = document.getElementById('statisticsModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // 添加到页面
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // 渲染图表
+    setTimeout(() => {
+        data.question_statistics.forEach((questionStat, index) => {
+            if (questionStat.stats.type === 'pie' && questionStat.stats.data.some(d => d.value > 0)) {
+                renderPieChart(`chart-${index}`, questionStat.stats.data);
+            } else if (questionStat.stats.type === 'bar' && questionStat.stats.data.some(d => d.value > 0)) {
+                renderBarChart(`chart-${index}`, questionStat.stats.data);
+            }
+        });
+    }, 100);
+}
+
+// 生成问题统计HTML
+function generateQuestionStatHtml(questionStat) {
+    let chartHtml = '';
+    
+    if (questionStat.stats.type === 'pie' || questionStat.stats.type === 'bar') {
+        chartHtml = `<canvas id="chart-${questionStat.question_id}" width="400" height="300"></canvas>`;
+    } else if (questionStat.stats.type === 'text') {
+        chartHtml = `
+            <div class="text-stats">
+                <p><strong>回答总数：</strong>${questionStat.stats.data.total}</p>
+                <p><strong>答案样本：</strong></p>
+                <ul>
+                    ${questionStat.stats.data.samples.map(sample => 
+                        `<li>${sample}</li>`
+                    ).join('')}
+                </ul>
+            </div>
+        `;
+    }
+    
+    return `
+        <div class="question-stat-item">
+            <h4>${questionStat.question_text}</h4>
+            <p>题型：${getQuestionTypeName(questionStat.question_type)} | 回答数：${questionStat.total_answers}</p>
+            <div class="chart-container">
+                ${chartHtml}
+            </div>
+        </div>
+    `;
+}
+
+// 获取题型名称
+function getQuestionTypeName(type) {
+    const typeNames = {
+        'text': '单行文本',
+        'textarea': '多行文本',
+        'radio': '单选题',
+        'checkbox': '多选题'
+    };
+    return typeNames[type] || type;
+}
+
+// 简单的饼图渲染
+function renderPieChart(canvasId, data) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const radius = Math.min(centerX, centerY) - 50;
+    
+    const total = data.reduce((sum, item) => sum + item.value, 0);
+    if (total === 0) return;
+    
+    const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
+    
+    let currentAngle = 0;
+    
+    data.forEach((item, index) => {
+        if (item.value > 0) {
+            const sliceAngle = (item.value / total) * 2 * Math.PI;
+            
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.arc(centerX, centerY, radius, currentAngle, currentAngle + sliceAngle);
+            ctx.closePath();
+            ctx.fillStyle = colors[index % colors.length];
+            ctx.fill();
+            
+            // 添加标签
+            const labelAngle = currentAngle + sliceAngle / 2;
+            const labelX = centerX + Math.cos(labelAngle) * (radius + 20);
+            const labelY = centerY + Math.sin(labelAngle) * (radius + 20);
+            
+            ctx.fillStyle = '#333';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${item.label}: ${item.value}`, labelX, labelY);
+            
+            currentAngle += sliceAngle;
+        }
+    });
+}
+
+// 简单的柱状图渲染
+function renderBarChart(canvasId, data) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const padding = 50;
+    const chartWidth = canvas.width - 2 * padding;
+    const chartHeight = canvas.height - 2 * padding;
+    
+    const maxValue = Math.max(...data.map(item => item.value));
+    if (maxValue === 0) return;
+    
+    const barWidth = chartWidth / data.length * 0.8;
+    const barSpacing = chartWidth / data.length * 0.2;
+    
+    data.forEach((item, index) => {
+        const barHeight = (item.value / maxValue) * chartHeight;
+        const x = padding + index * (barWidth + barSpacing);
+        const y = canvas.height - padding - barHeight;
+        
+        ctx.fillStyle = '#36A2EB';
+        ctx.fillRect(x, y, barWidth, barHeight);
+        
+        // 添加数值标签
+        ctx.fillStyle = '#333';
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(item.value.toString(), x + barWidth / 2, y - 5);
+        
+        // 添加选项标签
+        ctx.save();
+        ctx.translate(x + barWidth / 2, canvas.height - padding + 15);
+        ctx.rotate(-Math.PI / 4);
+        ctx.textAlign = 'right';
+        ctx.fillText(item.label, 0, 0);
+        ctx.restore();
+    });
+}
+
+// 关闭统计模态框
+function hideStatisticsModal() {
+    const modal = document.getElementById('statisticsModal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// 删除问卷
+async function deleteSurvey(surveyId) {
+    if (!confirm('确定要删除这个问卷吗？此操作不可恢复！')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/admin/surveys/${surveyId}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showAlert('问卷删除成功', 'success');
+            loadSurveys();
+        } else {
+            showAlert(data.error || '删除失败', 'danger');
+        }
+    } catch (error) {
+        showAlert('删除失败，请稍后重试', 'danger');
+    }
+}
+
+// 重置创建表单为创建模式
+function resetToCreateMode() {
+    const form = document.getElementById('createSurveyForm');
+    form.onsubmit = createSurvey;
+    document.querySelector('#createModal h2').textContent = '创建新问卷';
+}
+
 // 点击模态框外部关闭
 document.getElementById('createModal').addEventListener('click', (e) => {
     if (e.target.id === 'createModal') {
         hideCreateModal();
+        resetToCreateMode();
     }
 });
+
+// 修改hideCreateModal函数
+const originalHideCreateModal = hideCreateModal;
+hideCreateModal = function() {
+    originalHideCreateModal();
+    resetToCreateMode();
+};
