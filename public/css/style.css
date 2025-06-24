@@ -421,6 +421,9 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  /* 确保颜色样式不被覆盖 */
+  color: #fff !important;
+  text-decoration: none !important;
 }
 
 /* 移动端输入框优化 */
