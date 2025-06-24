@@ -2,6 +2,7 @@
 
 let questionCount = 0;
 let questions = []; // 存储当前正在编辑的问题列表
+let isEditMode = false; // 标记当前是否为编辑模式
 
 // 渲染问题列表（用于编辑模式）
 function renderQuestions() {
@@ -292,6 +293,11 @@ function removeOption(button) {
 document.getElementById('createSurveyForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     
+    // 如果是编辑模式，不执行创建逻辑（由onsubmit处理）
+    if (isEditMode) {
+        return;
+    }
+    
     const formData = new FormData(e.target);
     const surveyData = {
         title: formData.get('title'),
@@ -534,6 +540,9 @@ async function editSurvey(surveyId) {
             }
             
             renderQuestions();
+            
+            // 设置编辑模式
+            isEditMode = true;
             
             // 修改表单提交行为
             const form = document.getElementById('createSurveyForm');
@@ -834,6 +843,9 @@ async function deleteSurvey(surveyId) {
 
 // 重置创建表单为创建模式
 function resetToCreateMode() {
+    // 重置编辑模式标志
+    isEditMode = false;
+    
     // 重置表单提交行为为默认（创建模式）
     const form = document.getElementById('createSurveyForm');
     form.onsubmit = null; // 清除编辑模式的onsubmit，让addEventListener生效
