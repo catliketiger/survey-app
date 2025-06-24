@@ -476,7 +476,11 @@ app.get('/api/admin/surveys/:id/results', authenticateToken, requireAdmin, async
 
 // 获取问卷编辑信息
 app.get('/api/admin/surveys/:id/edit', authenticateToken, requireAdmin, async (req, res) => {
-  const surveyId = req.params.id;
+  const surveyId = parseInt(req.params.id);
+  
+  if (isNaN(surveyId)) {
+    return res.status(400).json({ error: '无效的问卷ID' });
+  }
   
   try {
     // 获取问卷基本信息
@@ -512,7 +516,11 @@ app.get('/api/admin/surveys/:id/edit', authenticateToken, requireAdmin, async (r
 
 // 更新问卷
 app.put('/api/admin/surveys/:id', authenticateToken, requireAdmin, async (req, res) => {
-  const surveyId = req.params.id;
+  const surveyId = parseInt(req.params.id);
+  
+  if (isNaN(surveyId)) {
+    return res.status(400).json({ error: '无效的问卷ID' });
+  }
   const { title, description, start_date, end_date, email_recipient, questions } = req.body;
 
   try {
@@ -545,7 +553,11 @@ app.put('/api/admin/surveys/:id', authenticateToken, requireAdmin, async (req, r
 
 // 获取问卷统计数据
 app.get('/api/admin/surveys/:id/statistics', authenticateToken, requireAdmin, async (req, res) => {
-  const surveyId = req.params.id;
+  const surveyId = parseInt(req.params.id);
+  
+  if (isNaN(surveyId)) {
+    return res.status(400).json({ error: '无效的问卷ID' });
+  }
   
   try {
     // 获取问卷基本信息
@@ -664,7 +676,11 @@ app.get('/api/admin/surveys/:id/statistics', authenticateToken, requireAdmin, as
 
 // 删除问卷
 app.delete('/api/admin/surveys/:id', authenticateToken, requireAdmin, async (req, res) => {
-  const surveyId = req.params.id;
+  const surveyId = parseInt(req.params.id);
+  
+  if (isNaN(surveyId)) {
+    return res.status(400).json({ error: '无效的问卷ID' });
+  }
   
   try {
     // 检查问卷是否存在
