@@ -53,7 +53,6 @@ function createSurveyCard(survey) {
         <div class="survey-title">${survey.title}</div>
         <div class="survey-description">${survey.description || '暂无描述'}</div>
         <div class="survey-meta">
-            <p><strong>创建者：</strong>${survey.creator_name}</p>
             <p><strong>创建时间：</strong>${createdDate}</p>
             <p><strong>有效期：</strong>${startDate} 至 ${endDate}</p>
         </div>
