@@ -282,6 +282,7 @@ document.getElementById('createSurveyForm').addEventListener('submit', async (e)
     }
 
     try {
+        console.log('创建问卷 - 发送请求:', surveyData);
         const response = await fetch('/api/admin/surveys', {
             method: 'POST',
             headers: {
@@ -290,17 +291,29 @@ document.getElementById('createSurveyForm').addEventListener('submit', async (e)
             body: JSON.stringify(surveyData)
         });
 
+        console.log('创建问卷 - 响应状态:', response.status, response.statusText);
+        
         const data = await response.json();
+        console.log('创建问卷 - 响应数据:', data);
 
         if (response.ok) {
+            console.log('创建问卷 - 成功');
             showAlert('问卷创建成功', 'success');
             hideCreateModal();
             await loadSurveys();
         } else {
+            console.error('创建问卷 - 服务器错误:', response.status, data);
             showAlert(data.error || '创建失败', 'danger');
         }
     } catch (error) {
+        console.error('创建问卷 - 网络/解析错误:', error);
         showAlert('网络错误，请稍后重试', 'danger');
+        // 即使出错也刷新列表，因为问卷可能已经创建成功
+        try {
+            await loadSurveys();
+        } catch (e) {
+            console.error('刷新问卷列表失败:', e);
+        }
     }
 });
 

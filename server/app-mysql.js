@@ -378,17 +378,29 @@ app.post('/api/admin/surveys', authenticateToken, requireAdmin, async (req, res)
   const { title, description, start_date, end_date, email_recipient, questions } = req.body;
   
   try {
+    console.log('创建问卷 - 请求数据:', { title, description, start_date, end_date, email_recipient, questions });
+    
     const surveyResult = await database.run(
       'INSERT INTO surveys (title, description, creator_id, start_date, end_date, email_recipient) VALUES (?, ?, ?, ?, ?, ?)',
       [title, description, req.user.id, start_date, end_date, email_recipient]
     );
 
     const surveyId = surveyResult.lastID;
+    console.log('创建问卷 - 问卷ID:', surveyId);
 
     // 插入问题
     if (questions && questions.length > 0) {
+      console.log('创建问卷 - 插入问题数量:', questions.length);
       for (let i = 0; i < questions.length; i++) {
         const q = questions[i];
+        
+        // 根据数据库类型处理布尔值
+        const isRequired = database.dbType === 'postgres' ? 
+          (q.is_required ? true : false) : 
+          (q.is_required ? 1 : 0);
+        
+        console.log(`插入问题 ${i + 1}:`, q.question_text, '类型:', q.question_type, '必填:', isRequired);
+        
         await database.run(
           'INSERT INTO questions (survey_id, question_text, question_type, options, is_required, order_num) VALUES (?, ?, ?, ?, ?, ?)',
           [
@@ -396,16 +408,18 @@ app.post('/api/admin/surveys', authenticateToken, requireAdmin, async (req, res)
             q.question_text, 
             q.question_type, 
             JSON.stringify(q.options || []), 
-            q.is_required ? 1 : 0, 
+            isRequired, 
             i + 1
           ]
         );
       }
     }
 
+    console.log('创建问卷 - 成功完成');
     res.json({ message: '创建成功', surveyId });
   } catch (error) {
     console.error('创建问卷失败:', error);
+    console.error('错误堆栈:', error.stack);
     res.status(500).json({ error: '创建问卷失败' });
   }
 });
