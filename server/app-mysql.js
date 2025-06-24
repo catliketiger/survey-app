@@ -483,10 +483,14 @@ app.get('/api/admin/surveys/:id/edit', authenticateToken, requireAdmin, async (r
   }
   
   try {
+    console.log('获取问卷编辑信息, surveyId:', surveyId, 'type:', typeof surveyId);
+    
     // 获取问卷基本信息
     const survey = await database.get('SELECT * FROM surveys WHERE id = ?', [surveyId]);
+    console.log('查询到的问卷信息:', survey);
     
     if (!survey) {
+      console.log('问卷不存在, surveyId:', surveyId);
       return res.status(404).json({ error: '问卷不存在' });
     }
 
@@ -495,6 +499,7 @@ app.get('/api/admin/surveys/:id/edit', authenticateToken, requireAdmin, async (r
       'SELECT * FROM questions WHERE survey_id = ? ORDER BY order_num', 
       [surveyId]
     );
+    console.log('查询到的问题数量:', questions.length);
     
     // 解析选项JSON
     questions.forEach(q => {
@@ -502,14 +507,17 @@ app.get('/api/admin/surveys/:id/edit', authenticateToken, requireAdmin, async (r
         try {
           q.options = typeof q.options === 'string' ? JSON.parse(q.options) : q.options;
         } catch (e) {
+          console.error('解析问题选项失败:', e, 'options:', q.options);
           q.options = [];
         }
       }
     });
 
+    console.log('成功返回问卷编辑信息');
     res.json({ ...survey, questions });
   } catch (error) {
     console.error('获取问卷编辑信息失败:', error);
+    console.error('错误堆栈:', error.stack);
     res.status(500).json({ error: '获取编辑信息失败' });
   }
 });
@@ -683,19 +691,25 @@ app.delete('/api/admin/surveys/:id', authenticateToken, requireAdmin, async (req
   }
   
   try {
+    console.log('删除问卷, surveyId:', surveyId, 'type:', typeof surveyId);
+    
     // 检查问卷是否存在
     const survey = await database.get('SELECT id FROM surveys WHERE id = ?', [surveyId]);
+    console.log('查询到的问卷:', survey);
     
     if (!survey) {
+      console.log('问卷不存在, surveyId:', surveyId);
       return res.status(404).json({ error: '问卷不存在' });
     }
 
     // 删除相关数据（外键约束会自动删除相关记录）
-    await database.run('DELETE FROM surveys WHERE id = ?', [surveyId]);
+    const deleteResult = await database.run('DELETE FROM surveys WHERE id = ?', [surveyId]);
+    console.log('删除结果:', deleteResult);
 
     res.json({ message: '问卷删除成功' });
   } catch (error) {
     console.error('删除问卷失败:', error);
+    console.error('错误堆栈:', error.stack);
     res.status(500).json({ error: '删除失败' });
   }
 });

@@ -530,9 +530,9 @@ function showStatisticsModal(data) {
     setTimeout(() => {
         data.question_statistics.forEach((questionStat, index) => {
             if (questionStat.stats.type === 'pie' && questionStat.stats.data.some(d => d.value > 0)) {
-                renderPieChart(`chart-${index}`, questionStat.stats.data);
+                renderPieChart(`chart-${questionStat.question_id}`, questionStat.stats.data);
             } else if (questionStat.stats.type === 'bar' && questionStat.stats.data.some(d => d.value > 0)) {
-                renderBarChart(`chart-${index}`, questionStat.stats.data);
+                renderBarChart(`chart-${questionStat.question_id}`, questionStat.stats.data);
             }
         });
     }, 100);
