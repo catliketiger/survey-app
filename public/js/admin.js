@@ -469,8 +469,11 @@ async function editSurvey(surveyId) {
             // 填充编辑表单
             document.getElementById('title').value = survey.title;
             document.getElementById('description').value = survey.description || '';
-            document.getElementById('startDate').value = survey.start_date ? survey.start_date.split('T')[0] : '';
-            document.getElementById('endDate').value = survey.end_date ? survey.end_date.split('T')[0] : '';
+            // 处理datetime-local格式 (YYYY-MM-DDTHH:MM)
+            document.getElementById('startDate').value = survey.start_date ? 
+                new Date(survey.start_date).toISOString().slice(0, 16) : '';
+            document.getElementById('endDate').value = survey.end_date ? 
+                new Date(survey.end_date).toISOString().slice(0, 16) : '';
             document.getElementById('emailRecipient').value = survey.email_recipient || '';
             
             // 清空现有问题
