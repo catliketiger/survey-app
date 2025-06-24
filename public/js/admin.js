@@ -392,6 +392,8 @@ async function editSurvey(surveyId) {
         const survey = await response.json();
         
         if (response.ok) {
+            console.log('编辑问卷 - API响应成功:', survey);
+            
             // 填充编辑表单
             document.getElementById('surveyTitle').value = survey.title;
             document.getElementById('surveyDescription').value = survey.description || '';
@@ -402,15 +404,20 @@ async function editSurvey(surveyId) {
             // 清空现有问题
             questions.length = 0;
             
-            // 加载问题
-            survey.questions.forEach(question => {
-                questions.push({
-                    question_text: question.question_text,
-                    question_type: question.question_type,
-                    options: question.options || [],
-                    is_required: question.is_required
+            // 加载问题（检查questions是否存在）
+            if (survey.questions && Array.isArray(survey.questions)) {
+                console.log('加载问题数量:', survey.questions.length);
+                survey.questions.forEach(question => {
+                    questions.push({
+                        question_text: question.question_text,
+                        question_type: question.question_type,
+                        options: question.options || [],
+                        is_required: question.is_required
+                    });
                 });
-            });
+            } else {
+                console.warn('问卷没有questions数组或questions不是数组:', survey.questions);
+            }
             
             renderQuestions();
             
@@ -425,9 +432,11 @@ async function editSurvey(surveyId) {
             document.querySelector('#createModal h2').textContent = '编辑问卷';
             document.getElementById('createModal').classList.remove('hidden');
         } else {
+            console.error('编辑问卷 - API响应失败:', response.status, survey);
             showAlert(survey.error || '获取问卷信息失败', 'danger');
         }
     } catch (error) {
+        console.error('编辑问卷 - 请求失败:', error);
         showAlert('获取问卷信息失败', 'danger');
     }
 }
