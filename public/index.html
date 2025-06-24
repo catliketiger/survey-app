@@ -2,15 +2,16 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
     <title>简单问卷调查 - 首页</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
+<body class="mobile-optimized">
     <header class="header">
         <nav class="nav container">
             <a href="/" class="logo">简单问卷</a>
-            <div class="nav-links">
+            <button class="mobile-nav-toggle" onclick="toggleMobileNav()">☰</button>
+            <div class="nav-links" id="navLinks">
                 <div class="user-info hidden" id="userInfo">
                     <span id="username"></span>
                     <a href="admin.html" id="adminLink" class="hidden">管理后台</a>

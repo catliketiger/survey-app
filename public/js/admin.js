@@ -40,6 +40,24 @@ function showAlert(message, type) {
     }, 5000);
 }
 
+// 移动端导航切换
+function toggleMobileNav() {
+    const navLinks = document.getElementById('navLinks');
+    navLinks.classList.toggle('show');
+}
+
+// 点击外部关闭移动端导航
+document.addEventListener('click', (e) => {
+    const navLinks = document.getElementById('navLinks');
+    const mobileToggle = document.querySelector('.mobile-nav-toggle');
+    
+    if (navLinks && navLinks.classList.contains('show') && 
+        !navLinks.contains(e.target) && 
+        !mobileToggle.contains(e.target)) {
+        navLinks.classList.remove('show');
+    }
+});
+
 // 检查管理员权限并初始化页面
 document.addEventListener('DOMContentLoaded', async () => {
     const hasPermission = await requireAdmin();

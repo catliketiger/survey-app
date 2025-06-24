@@ -2,15 +2,16 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
     <title>问卷填写 - 简单问卷调查</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
+<body class="mobile-optimized">
     <header class="header">
         <nav class="nav container">
             <a href="/" class="logo">简单问卷</a>
-            <div class="nav-links">
+            <button class="mobile-menu-toggle" id="mobileMenuToggle">☰</button>
+            <div class="nav-links" id="navLinks">
                 <a href="/">返回首页</a>
             </div>
         </nav>
@@ -292,6 +293,12 @@
                 submitBtn.disabled = false;
                 submitBtn.textContent = originalText;
             }
+        });
+
+        // 移动端导航菜单切换
+        document.getElementById('mobileMenuToggle').addEventListener('click', function() {
+            const navLinks = document.getElementById('navLinks');
+            navLinks.classList.toggle('mobile-menu-open');
         });
 
         // 页面加载时初始化

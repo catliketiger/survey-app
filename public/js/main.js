@@ -63,6 +63,24 @@ function createSurveyCard(survey) {
     return card;
 }
 
+// 移动端导航切换
+function toggleMobileNav() {
+    const navLinks = document.getElementById('navLinks');
+    navLinks.classList.toggle('show');
+}
+
+// 点击外部关闭移动端导航
+document.addEventListener('click', (e) => {
+    const navLinks = document.getElementById('navLinks');
+    const mobileToggle = document.querySelector('.mobile-nav-toggle');
+    
+    if (navLinks && navLinks.classList.contains('show') && 
+        !navLinks.contains(e.target) && 
+        !mobileToggle.contains(e.target)) {
+        navLinks.classList.remove('show');
+    }
+});
+
 // 页面加载时初始化
 document.addEventListener('DOMContentLoaded', () => {
     loadSurveys();

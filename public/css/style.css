@@ -373,32 +373,271 @@ body {
   display: none !important;
 }
 
-/* 响应式 */
-@media (max-width: 768px) {
-  .nav {
-    flex-direction: column;
-    gap: 1rem;
-  }
-  
-  .nav-links {
-    gap: 1rem;
+/* 移动端优化 */
+/* 确保移动端正确缩放 */
+.mobile-optimized {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* 移动端表格优化 */
+.mobile-table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 移动端导航菜单 */
+.mobile-nav-toggle {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.5rem;
+}
+
+.mobile-nav-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #fff;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  border-radius: 0 0 8px 8px;
+  padding: 1rem;
+  z-index: 1000;
+}
+
+.mobile-nav-menu.show {
+  display: block;
+}
+
+/* 触摸友好的按钮 */
+.btn {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 移动端输入框优化 */
+.form-input, .form-select, .form-textarea {
+  min-height: 44px;
+  font-size: 16px; /* 防止iOS自动缩放 */
+}
+
+/* 响应式断点 */
+/* 平板设备 */
+@media (max-width: 1024px) {
+  .container {
+    padding: 0 15px;
   }
   
   .survey-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+  }
+  
+  .card {
+    padding: 1.5rem;
+  }
+}
+
+/* 手机设备 */
+@media (max-width: 768px) {
+  body {
+    font-size: 14px;
   }
   
   .container {
     padding: 0 10px;
   }
   
-  .page-title h1 {
-    font-size: 2rem;
+  /* 导航优化 */
+  .nav {
+    flex-wrap: wrap;
+    padding: 0.8rem 0;
   }
   
+  .logo {
+    font-size: 1.5rem;
+  }
+  
+  .nav-links {
+    display: none;
+    width: 100%;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+  }
+  
+  .nav-links.show {
+    display: flex;
+  }
+  
+  .mobile-nav-toggle {
+    display: block;
+  }
+  
+  /* 页面标题 */
+  .page-title {
+    margin-bottom: 2rem;
+  }
+  
+  .page-title h1 {
+    font-size: 1.8rem;
+    line-height: 1.3;
+  }
+  
+  .page-title p {
+    font-size: 1rem;
+  }
+  
+  /* 主要内容 */
+  .main {
+    padding: 1.5rem 0;
+  }
+  
+  /* 问卷网格 */
+  .survey-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .survey-card {
+    padding: 1.2rem;
+  }
+  
+  .survey-title {
+    font-size: 1.2rem;
+  }
+  
+  /* 卡片优化 */
+  .card {
+    padding: 1.2rem;
+    margin-bottom: 1rem;
+  }
+  
+  /* 认证表单 */
+  .auth-container {
+    margin: 2rem auto;
+  }
+  
+  .auth-card {
+    padding: 1.5rem;
+  }
+  
+  .auth-title {
+    font-size: 1.5rem;
+  }
+  
+  /* 问卷表单 */
+  .question-group {
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .question-title {
+    font-size: 1rem;
+    line-height: 1.4;
+  }
+  
+  /* 管理后台 */
   .admin-header {
     flex-direction: column;
     gap: 1rem;
     align-items: stretch;
+  }
+  
+  /* 表格移动端优化 */
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .table {
+    min-width: 600px;
+  }
+  
+  .table th,
+  .table td {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.9rem;
+  }
+  
+  /* 按钮组优化 */
+  .btn-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .btn-group .btn {
+    width: 100%;
+    margin: 0;
+  }
+  
+  /* 移动端状态优化 */
+  .status {
+    font-size: 0.8rem;
+    padding: 0.2rem 0.6rem;
+  }
+}
+
+/* 小屏手机设备 */
+@media (max-width: 480px) {
+  .container {
+    padding: 0 8px;
+  }
+  
+  .page-title h1 {
+    font-size: 1.6rem;
+  }
+  
+  .survey-card {
+    padding: 1rem;
+  }
+  
+  .card {
+    padding: 1rem;
+  }
+  
+  .auth-card {
+    padding: 1.2rem;
+  }
+  
+  .question-group {
+    padding: 0.8rem;
+  }
+  
+  .btn {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+  }
+  
+  .table th,
+  .table td {
+    padding: 0.5rem 0.3rem;
+    font-size: 0.85rem;
+  }
+}
+
+/* 横屏优化 */
+@media (max-width: 768px) and (orientation: landscape) {
+  .main {
+    padding: 1rem 0;
+  }
+  
+  .page-title {
+    margin-bottom: 1.5rem;
+  }
+  
+  .page-title h1 {
+    font-size: 1.6rem;
   }
 }
