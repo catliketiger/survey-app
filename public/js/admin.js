@@ -424,6 +424,11 @@ function displayResults(data) {
                 body { font-family: Arial, sans-serif; margin: 20px; }
                 .result-item { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; }
                 .stats { background: #f8f9fa; padding: 15px; margin-bottom: 20px; }
+                .action-buttons { margin: 20px 0; }
+                .btn { padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px; }
+                .btn:hover { background: #0056b3; }
+                .btn-success { background: #28a745; }
+                .btn-success:hover { background: #1e7e34; }
             </style>
         </head>
         <body>
@@ -431,6 +436,10 @@ function displayResults(data) {
             <div class="stats">
                 <h3>总体统计</h3>
                 <p>总回答数: ${data.total_responses}</p>
+            </div>
+            <div class="action-buttons">
+                <button class="btn btn-success" onclick="sendCSVEmail(${data.survey_id})">发送CSV结果到邮箱</button>
+                <button class="btn" onclick="window.print()">打印结果</button>
             </div>
             <h3>详细回答</h3>
     `;
@@ -450,6 +459,36 @@ function displayResults(data) {
     });
 
     resultHtml += `
+            <script>
+                // 发送CSV邮件函数
+                async function sendCSVEmail(surveyId) {
+                    const button = event.target;
+                    button.disabled = true;
+                    button.textContent = '发送中...';
+                    
+                    try {
+                        const response = await fetch(\`/api/admin/surveys/\${surveyId}/send-csv\`, {
+                            method: 'POST'
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (response.ok) {
+                            alert('CSV结果已发送到指定邮箱！');
+                            button.textContent = '发送成功';
+                            button.style.background = '#28a745';
+                        } else {
+                            alert('发送失败：' + (data.error || '未知错误'));
+                            button.disabled = false;
+                            button.textContent = '发送CSV结果到邮箱';
+                        }
+                    } catch (error) {
+                        alert('发送失败：网络错误');
+                        button.disabled = false;
+                        button.textContent = '发送CSV结果到邮箱';
+                    }
+                }
+            </script>
         </body>
         </html>
     `;

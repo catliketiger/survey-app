@@ -479,6 +479,7 @@ app.get('/api/admin/surveys/:id/results', authenticateToken, requireAdmin, async
     }
     
     res.json({
+      survey_id: parseInt(surveyId),
       total_responses: stats.total_responses,
       responses: responses
     });
@@ -754,6 +755,156 @@ app.delete('/api/admin/surveys/:id', authenticateToken, requireAdmin, async (req
     res.status(500).json({ error: '删除失败' });
   }
 });
+
+// 发送问卷结果CSV邮件
+app.post('/api/admin/surveys/:id/send-csv', authenticateToken, requireAdmin, async (req, res) => {
+  const surveyId = parseInt(req.params.id);
+  
+  if (isNaN(surveyId)) {
+    return res.status(400).json({ error: '无效的问卷ID' });
+  }
+  
+  try {
+    console.log('发送CSV邮件 - 问卷ID:', surveyId);
+    
+    // 获取问卷信息
+    const survey = await database.get('SELECT * FROM surveys WHERE id = ?', [surveyId]);
+    if (!survey) {
+      return res.status(404).json({ error: '问卷不存在' });
+    }
+    
+    if (!survey.email_recipient) {
+      return res.status(400).json({ error: '该问卷未设置邮件接收地址' });
+    }
+    
+    // 获取问卷问题
+    const questions = await database.query(
+      'SELECT * FROM questions WHERE survey_id = ? ORDER BY order_num', 
+      [surveyId]
+    );
+    
+    // 获取所有回答（兼容PostgreSQL和MySQL）
+    let responsesQuery;
+    if (database.dbType === 'postgres') {
+      responsesQuery = `
+        SELECT r.*, 
+               STRING_AGG(CONCAT(q.question_text, ': ', a.answer_text), '; ') as answers
+        FROM responses r
+        LEFT JOIN answers a ON r.id = a.response_id
+        LEFT JOIN questions q ON a.question_id = q.id
+        WHERE r.survey_id = $1
+        GROUP BY r.id, r.respondent_name, r.respondent_email, r.submitted_at
+        ORDER BY r.submitted_at DESC
+      `;
+    } else {
+      responsesQuery = `
+        SELECT r.*, 
+               GROUP_CONCAT(CONCAT(q.question_text, ': ', a.answer_text) SEPARATOR '; ') as answers
+        FROM responses r
+        LEFT JOIN answers a ON r.id = a.response_id
+        LEFT JOIN questions q ON a.question_id = q.id
+        WHERE r.survey_id = ?
+        GROUP BY r.id
+        ORDER BY r.submitted_at DESC
+      `;
+    }
+    
+    const responses = await database.query(responsesQuery, [surveyId]);
+    
+    // 生成CSV内容
+    const csvContent = generateCSV(survey, questions, responses);
+    
+    // 发送邮件
+    await sendCSVEmail(survey, csvContent);
+    
+    console.log('CSV邮件发送成功');
+    res.json({ message: 'CSV结果已发送到指定邮箱' });
+  } catch (error) {
+    console.error('发送CSV邮件失败:', error);
+    console.error('错误堆栈:', error.stack);
+    res.status(500).json({ error: '发送邮件失败' });
+  }
+});
+
+// 生成CSV内容
+function generateCSV(survey, questions, responses) {
+  console.log('生成CSV - 问卷:', survey.title, '回答数:', responses.length);
+  
+  // CSV头部
+  let csv = '\uFEFF'; // BOM for UTF-8
+  csv += `问卷标题:${survey.title}\n`;
+  csv += `创建时间:${new Date(survey.created_at).toLocaleString()}\n`;
+  csv += `总回答数:${responses.length}\n\n`;
+  
+  // 列标题
+  const headers = ['序号', '回答者姓名', '回答者邮箱', '提交时间'];
+  questions.forEach(q => {
+    headers.push(q.question_text);
+  });
+  csv += headers.join(',') + '\n';
+  
+  // 数据行
+  responses.forEach((response, index) => {
+    const row = [
+      index + 1,
+      `"${response.respondent_name || '匿名'}"`,
+      `"${response.respondent_email || '未提供'}"`,
+      `"${new Date(response.submitted_at).toLocaleString()}"`
+    ];
+    
+    // 解析回答内容
+    const answersMap = {};
+    if (response.answers) {
+      // 处理 GROUP_CONCAT 的结果
+      const answerPairs = response.answers.split('; ');
+      answerPairs.forEach(pair => {
+        const [question, answer] = pair.split(': ');
+        if (question && answer) {
+          answersMap[question.trim()] = answer.trim();
+        }
+      });
+    }
+    
+    // 按问题顺序添加答案
+    questions.forEach(q => {
+      const answer = answersMap[q.question_text] || '';
+      row.push(`"${answer}"`);
+    });
+    
+    csv += row.join(',') + '\n';
+  });
+  
+  return csv;
+}
+
+// 发送CSV邮件
+async function sendCSVEmail(survey, csvContent) {
+  console.log('发送CSV邮件到:', survey.email_recipient);
+  
+  const mailOptions = {
+    from: process.env.EMAIL_USER || 'catliketiger@qq.com',
+    to: survey.email_recipient,
+    subject: `问卷结果导出 - ${survey.title}`,
+    html: `
+      <h2>问卷结果导出</h2>
+      <p><strong>问卷标题：</strong>${survey.title}</p>
+      <p><strong>导出时间：</strong>${new Date().toLocaleString()}</p>
+      <p>请查看附件中的CSV文件获取详细的问卷结果数据。</p>
+      <hr>
+      <p><small>此邮件由问卷调查系统自动发送</small></p>
+    `,
+    attachments: [
+      {
+        filename: `问卷结果_${survey.title}_${new Date().toISOString().slice(0, 10)}.csv`,
+        content: csvContent,
+        contentType: 'text/csv; charset=utf-8'
+      }
+    ]
+  };
+
+  await transporter.sendMail(mailOptions);
+  console.log('CSV邮件发送完成');
+}
 
 // 启动服务器（仅在非Vercel环境）
 if (process.env.VERCEL !== '1') {
